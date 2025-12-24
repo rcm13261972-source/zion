@@ -71,9 +71,8 @@ def cmd_truth(args):
     text = ' '.join(args)
     
     try:
-        from golden_ratio_engine import GoldenRatioEngine
-        engine = GoldenRatioEngine()
-        result = engine.analyze(text)
+        from golden_ratio_engine import analyze_text
+        result = analyze_text(text)
         
         score = result.get('resonance_score', 0)
         
