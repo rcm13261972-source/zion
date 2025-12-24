@@ -65,15 +65,17 @@ def commit_memory_full():
                         continue
                         
                     session_id = message.get("sessionId")
+                    timestamp = message.get("timestamp")  # Extract the original timestamp
                     # Use 'type' for speaker, default to 'Unknown' if not present
                     msg_type = message.get("type", "unknown")
                     speaker = "Bobby" if msg_type == "user" else "Gem" 
                     content = message.get("message") or message.get("content") # Handle both possible keys
 
-                    if content: # Don't save empty messages
+                    if content and timestamp: # Only save if content and original timestamp exist
                         memory_tools.save_conversation(
                             speaker=speaker,
                             content=str(content), 
+                            timestamp=timestamp,  # Pass the original timestamp for de-duplication
                             session_id=session_id
                         )
                         total_committed_messages += 1

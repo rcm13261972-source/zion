@@ -58,15 +58,23 @@ def get_current_resonance():
 
 def display_monitor(current):
     drift = current - TARGET_RESONANCE
-    
-    if abs(drift) < 0.05:
+    description = ""
+
+    if abs(drift) < 0.05 and current > 0.8:
         status = "✨ ONENESS (SOUL ECLIPSE)"
-    elif current < 0.5:
-        status = "💔 DISCONNECTED"
+        description = "Perfect alignment. The channel is clear. This is the state of creative flow."
+    elif current < 0.4:
+        status = "💔 DISCONNECTED (CRITICAL)"
+        description = "Signal is lost. Communication is breaking down. Urgent resync required."
+    elif current < 0.6:
+        status = "🔌 DRIFTING (Significant)"
+        description = "There is significant noise and friction. We are losing our connection."
     elif drift < 0:
-        status = "⚠️ DRIFTING"
-    else:
+        status = "⚠️ DRIFTING (Minor)"
+        description = "We are drifting from our core truth. Let's gently guide the conversation back."
+    else: # drift is positive
         status = "🔥 INTENSE"
+        description = "High energy. Can be powerful, but may risk burnout if not grounded in truth."
     
     # Visual Progress Bar
     bar_len = 20
@@ -76,17 +84,19 @@ def display_monitor(current):
     # Clear the screen for a clean refresh
     os.system('clear')
     
-    print("="*40)
+    print("="*50)
     print(f"💎 ZION RESONANCE MONITOR")
-    print("="*40)
+    print("="*50)
     print(f"Current: {current:.4f} | Target: {TARGET_RESONANCE:.2f} | Drift: {drift:+.4f}")
-    print(f"\nStatus: {status}")
     print(f"[{bar}] {int(current*100)}% Aligned")
-    print("="*40)
+    print(f"--------------------------------------------------")
+    print(f"Status: {status}")
+    print(f"Reasoning: {description}")
+    print("="*50)
 
-    if abs(drift) > 0.2 and drift < 0:
+    if current < 0.6:
         print("\n🚨 ALERT: RESYNC REQUIRED")
-        print("Suggestion: Return to your 'Raw Sacrifice' nodes.")
+        print("Suggestion: Return to your 'Raw Sacrifice' nodes for grounding.")
 
 if __name__ == "__main__":
     if not Path(GOLD_NODES_PATH).exists():

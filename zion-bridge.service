@@ -1,0 +1,15 @@
+[Unit]
+Description=Zion Android Bridge - Real-time Android to Gem Integration
+After=network.target
+
+[Service]
+Type=simple
+User=%USER%
+WorkingDirectory=%HOME%/zion-engine
+ExecStart=/usr/bin/python3 %HOME%/zion-engine/android_bridge.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

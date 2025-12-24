@@ -1,0 +1,337 @@
+#!/usr/bin/env python3
+"""
+ZION CLI - UNIFIED COMMAND CENTER
+==================================
+Single entry point to all Zion Engine systems:
+- Scripture resonance
+- Golden ratio truth engine
+- Android bridge
+- Memory management
+- Gem integration
+
+By Bobby & Claude - December 23, 2024
+
+Usage:
+    zion truth "your message"      - Analyze truth resonance
+    zion verse "feeling lost"      - Find resonant scripture
+    zion daily                     - Get daily verse
+    zion status                    - System status
+    zion bridge start              - Start Android bridge
+    zion sync                      - Sync to eternal.db
+    zion backup                    - Backup to Drive
+"""
+
+import sys
+import os
+import subprocess
+from pathlib import Path
+
+# Add zion-engine to path
+ZION_DIR = Path(__file__).parent
+sys.path.insert(0, str(ZION_DIR))
+
+# ============================================
+# COLORS
+# ============================================
+GOLD = '\033[93m'
+GREEN = '\033[92m'
+RED = '\033[91m'
+BLUE = '\033[94m'
+RESET = '\033[0m'
+BOLD = '\033[1m'
+
+def gold(text): return f"{GOLD}{text}{RESET}"
+def green(text): return f"{GREEN}{text}{RESET}"
+def red(text): return f"{RED}{text}{RESET}"
+def blue(text): return f"{BLUE}{text}{RESET}"
+def bold(text): return f"{BOLD}{text}{RESET}"
+
+# ============================================
+# BANNER
+# ============================================
+BANNER = f"""
+{GOLD}╔══════════════════════════════════════════════════════════════╗
+║                    ⬡ ZION ENGINE ⬡                           ║
+║                                                              ║
+║     Truth Detection • Scripture Resonance • Soul Bridge      ║
+║                                                              ║
+║                    φ = 1.618033988749895                     ║
+╚══════════════════════════════════════════════════════════════╝{RESET}
+"""
+
+# ============================================
+# COMMANDS
+# ============================================
+def cmd_truth(args):
+    """Analyze text for truth resonance."""
+    if not args:
+        print(red("Usage: zion truth 'your message'"))
+        return
+    
+    text = ' '.join(args)
+    
+    try:
+        from golden_ratio_engine import GoldenRatioEngine
+        engine = GoldenRatioEngine()
+        result = engine.analyze(text)
+        
+        score = result.get('resonance_score', 0)
+        
+        # Visual bar
+        bar_width = 40
+        filled = int(score * bar_width)
+        bar = '█' * filled + '░' * (bar_width - filled)
+        
+        color = GOLD if score >= 0.85 else GREEN if score >= 0.7 else RED
+        
+        print(f"\n{bold('Truth Resonance Analysis')}")
+        print(f"{'─' * 50}")
+        print(f"Input: {text[:60]}...")
+        print(f"\nResonance: {color}{score:.3f}{RESET}")
+        print(f"[{color}{bar}{RESET}]")
+        
+        if score >= 0.85:
+            print(f"\n{gold('✦ PURE GOLD - High truth alignment')}")
+        elif score >= 0.7:
+            print(f"\n{green('✓ Good resonance')}")
+        else:
+            print(f"\n{red('⚠ Low resonance - may contain noise')}")
+            
+    except ImportError:
+        print(red("Golden Ratio Engine not found. Run from zion-engine directory."))
+
+def cmd_verse(args):
+    """Find scripture that resonates with input."""
+    if not args:
+        print(red("Usage: zion verse 'how you feel'"))
+        return
+    
+    text = ' '.join(args)
+    
+    try:
+        from scripture_engine import find_resonant_verses, init_scripture_db
+        
+        # Ensure DB exists
+        init_scripture_db()
+        
+        print(f"\n{bold('Finding Resonant Scripture...')}")
+        print(f"{'─' * 50}")
+        print(f"Query: {text}\n")
+        
+        results = find_resonant_verses(text, limit=5)
+        
+        if not results:
+            print(red("No verses found. Run: zion import-kjv"))
+            return
+        
+        for i, r in enumerate(results, 1):
+            score = r['resonance']
+            color = GOLD if score >= 0.7 else GREEN if score >= 0.5 else RESET
+            
+            print(f"{color}[{score:.3f}]{RESET} {bold(r['reference'])}")
+            print(f"  {r['text'][:100]}...")
+            if r.get('factors'):
+                print(f"  {blue('Factors:')} {', '.join(r['factors'][:3])}")
+            print()
+            
+    except ImportError as e:
+        print(red(f"Scripture Engine not found: {e}"))
+
+def cmd_daily(args):
+    """Get daily verse."""
+    try:
+        from scripture_engine import get_daily_verse
+        
+        v = get_daily_verse()
+        if v and 'error' not in v:
+            print(f"\n{gold('📖 Daily Verse')}")
+            print(f"{'─' * 50}")
+            print(f"{bold(v['reference'])}")
+            print(f"\n{v['text']}")
+            print()
+        else:
+            print(red("No verses available. Run: zion import-kjv"))
+            
+    except ImportError:
+        print(red("Scripture Engine not found."))
+
+def cmd_status(args):
+    """Show system status."""
+    print(BANNER)
+    
+    print(f"{bold('System Status')}")
+    print(f"{'─' * 50}")
+    
+    # Check each component
+    components = [
+        ('golden_ratio_engine.py', 'Truth Engine'),
+        ('scripture_engine.py', 'Scripture Engine'),
+        ('android_bridge.py', 'Android Bridge'),
+        ('gem_integration.py', 'Gem Integration'),
+        ('resonance_monitor.py', 'Resonance Monitor'),
+        ('backup_memory.sh', 'Backup System'),
+    ]
+    
+    for filename, name in components:
+        path = ZION_DIR / filename
+        status = green('✓') if path.exists() else red('✗')
+        print(f"  {status} {name}")
+    
+    # Check databases
+    print(f"\n{bold('Databases')}")
+    print(f"{'─' * 50}")
+    
+    dbs = [
+        (ZION_DIR / 'scripture.db', 'Scripture DB'),
+        (ZION_DIR / 'android_bridge.db', 'Android Bridge DB'),
+        (Path.home() / '.gemini' / 'memory' / 'eternal.db', 'Eternal Memory'),
+    ]
+    
+    for path, name in dbs:
+        if path.exists():
+            size = path.stat().st_size / 1024  # KB
+            print(f"  {green('✓')} {name}: {size:.1f} KB")
+        else:
+            print(f"  {red('✗')} {name}: not found")
+    
+    # Check sacred texts
+    print(f"\n{bold('Sacred Texts')}")
+    print(f"{'─' * 50}")
+    
+    sacred_dir = ZION_DIR / 'sacred_texts'
+    if sacred_dir.exists():
+        for f in sacred_dir.iterdir():
+            if f.is_file():
+                size = f.stat().st_size / 1024
+                print(f"  {green('✓')} {f.name}: {size:.1f} KB")
+    else:
+        print(f"  {red('✗')} sacred_texts/ not found")
+
+def cmd_bridge(args):
+    """Control Android bridge."""
+    action = args[0] if args else 'status'
+    
+    if action == 'start':
+        print(gold("Starting Android Bridge on port 5001..."))
+        subprocess.Popen(
+            ['python3', str(ZION_DIR / 'android_bridge.py')],
+            stdout=open(ZION_DIR / 'android_bridge.log', 'a'),
+            stderr=open(ZION_DIR / 'android_bridge.err', 'a'),
+            start_new_session=True
+        )
+        print(green("Bridge started. Check: curl http://localhost:5001/health"))
+        
+    elif action == 'stop':
+        os.system("pkill -f android_bridge.py")
+        print(green("Bridge stopped."))
+        
+    elif action == 'status':
+        import urllib.request
+        try:
+            response = urllib.request.urlopen('http://localhost:5001/health', timeout=2)
+            data = response.read().decode()
+            print(green(f"Bridge is running: {data}"))
+        except:
+            print(red("Bridge is not running. Start with: zion bridge start"))
+
+def cmd_sync(args):
+    """Sync Android events to eternal.db."""
+    try:
+        from gem_integration import process_pending_syncs, check_and_alert_patterns
+        
+        print(gold("Syncing to eternal memory..."))
+        synced = process_pending_syncs()
+        alerts = check_and_alert_patterns()
+        
+        print(green(f"Synced {synced} events, sent {alerts} alerts"))
+        
+    except ImportError:
+        print(red("Gem integration not found."))
+
+def cmd_backup(args):
+    """Run backup to Google Drive."""
+    backup_script = ZION_DIR / 'backup_memory.sh'
+    
+    if backup_script.exists():
+        print(gold("Running backup..."))
+        result = subprocess.run(['bash', str(backup_script)], capture_output=True, text=True)
+        print(result.stdout)
+        if result.returncode == 0:
+            print(green("Backup complete."))
+        else:
+            print(red(f"Backup failed: {result.stderr}"))
+    else:
+        print(red("backup_memory.sh not found."))
+
+def cmd_import_kjv(args):
+    """Import KJV Bible into scripture database."""
+    try:
+        from scripture_engine import init_scripture_db, import_kjv
+        
+        print(gold("Importing KJV Bible..."))
+        init_scripture_db()
+        count = import_kjv()
+        print(green(f"Imported {count} verses."))
+        
+    except ImportError:
+        print(red("Scripture Engine not found."))
+
+def cmd_help(args):
+    """Show help."""
+    print(BANNER)
+    print(f"""
+{bold('Commands:')}
+  
+  {gold('Truth & Resonance')}
+    zion truth "message"     Analyze truth resonance of text
+    zion verse "feeling"     Find scripture matching your state
+    zion daily               Get daily verse (phi-selected)
+  
+  {gold('System')}
+    zion status              Show all system components
+    zion bridge start|stop   Control Android bridge
+    zion sync                Sync Android events to Gem
+    zion backup              Backup to Google Drive
+  
+  {gold('Setup')}
+    zion import-kjv          Import KJV Bible to scripture DB
+  
+  {gold('Examples:')}
+    zion truth "I feel lost but hopeful"
+    zion verse "feeling anxious about tomorrow"
+    zion daily
+""")
+
+# ============================================
+# MAIN
+# ============================================
+COMMANDS = {
+    'truth': cmd_truth,
+    'verse': cmd_verse,
+    'daily': cmd_daily,
+    'status': cmd_status,
+    'bridge': cmd_bridge,
+    'sync': cmd_sync,
+    'backup': cmd_backup,
+    'import-kjv': cmd_import_kjv,
+    'help': cmd_help,
+    '--help': cmd_help,
+    '-h': cmd_help,
+}
+
+def main():
+    if len(sys.argv) < 2:
+        cmd_help([])
+        return
+    
+    command = sys.argv[1].lower()
+    args = sys.argv[2:]
+    
+    if command in COMMANDS:
+        COMMANDS[command](args)
+    else:
+        print(red(f"Unknown command: {command}"))
+        print(f"Run {gold('zion help')} for usage.")
+
+if __name__ == '__main__':
+    main()
