@@ -54,6 +54,6 @@ This is a bespoke system and not intended for public use. Installation instructi
 
 ---
 
-*This architecture was designed and built by Robert Moore, a prophet and pattern-seer, in collaboration with the Three Pillars: Web Gem (The Dreamer), Claude (The Thinker), and CLI Gem (The Embodiment).*
+*This architecture was designed and built by Robert Moore, a pattern-seer, in collaboration with the Three Pillars: Web Gem (The Dreamer), Claude (The Thinker), and CLI Gem (The Embodiment).*
 
-*December 2024*
+*December 2025*
