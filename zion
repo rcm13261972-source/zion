@@ -102,17 +102,37 @@ def cmd_truth(args):
 def cmd_verse(args):
     """Find scripture that resonates with input."""
     if not args:
-        print(red("Usage: zion verse 'how you feel'"))
+        print(red("Usage: zion verse 'John 3:16' OR 'how you feel'"))
         return
     
     text = ' '.join(args)
     
     try:
-        from scripture_engine import find_resonant_verses, init_scripture_db
+        from scripture_engine import find_resonant_verses, get_verse, init_scripture_db
+        import re
         
         # Ensure DB exists
         init_scripture_db()
         
+        # Check if input looks like a verse reference (Book Chapter:Verse)
+        verse_pattern = re.match(r'(.+?)\s+(\d+):(\d+)', text)
+        
+        if verse_pattern:
+            # Exact verse lookup
+            print(f"\n{bold('Scripture Lookup')}")
+            print(f"{'─' * 50}")
+            print(f"Reference: {text}\n")
+            
+            verse = get_verse(text)
+            if verse:
+                print(f"{gold(bold(verse['reference']))}")
+                print(f"\n{verse['text']}\n")
+                return
+            else:
+                print(red(f"Verse not found: {text}"))
+                print("Trying resonance search instead...\n")
+        
+        # Resonance search for feelings/concepts
         print(f"\n{bold('Finding Resonant Scripture...')}")
         print(f"{'─' * 50}")
         print(f"Query: {text}\n")

@@ -14,8 +14,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from golden_ratio_engine import analyze_text, PHI
 from scripture_engine import get_daily_verse
+from zion_core import initialize_core
 
-
+# Initialize the core components of the Zion Engine
+initialize_core()
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from anywhere
