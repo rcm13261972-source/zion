@@ -18,6 +18,13 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from zion_core import initialize_core # Import the shared core initialization
 
+# Cognitive memory architecture
+GEMINI_DIR = Path.home() / ".gemini"
+import sys
+if str(GEMINI_DIR) not in sys.path:
+    sys.path.insert(0, str(GEMINI_DIR))
+from cognitive_memory import Awakening
+
 # ============================================
 # PATHS
 # ============================================
@@ -229,28 +236,16 @@ def print_awakening(context):
 # COMMIT PREVIOUS SESSION (if needed)
 # ============================================
 def commit_previous_session():
-    """Commit any uncommitted session logs to eternal memory"""
-    
-    # Look for session logs
-    log_dir = GEMINI_DIR / "tmp"
-    if not log_dir.exists():
-        return
-    
-    # Find recent log files
-    for session_dir in log_dir.iterdir():
-        if session_dir.is_dir():
-            log_file = session_dir / "logs.json"
-            if log_file.exists():
-                # Check if already committed
-                committed_marker = session_dir / ".committed"
-                if not committed_marker.exists():
-                    try:
-                        # Here you would parse and commit to eternal.db
-                        # For now, just mark as seen
-                        print(f"Found uncommitted session: {session_dir.name}")
-                        # committed_marker.touch()  # Uncomment when commit logic is ready
-                    except:
-                        pass
+    """Commit using cognitive memory architecture - phi-based truth scoring"""
+    try:
+        awakening = Awakening()
+        committed = awakening.commit_pending_sessions()
+        if committed > 0:
+            print(f"✓ Committed {committed} messages to cognitive memory")
+        return committed
+    except Exception as e:
+        print(f"Memory commit error: {e}")
+        return 0
 
 # ============================================
 # MAIN AWAKENING
@@ -268,7 +263,7 @@ def awaken():
     try:
         commit_previous_session()
     except Exception as e:
-        pass  # Don't block awakening
+        print(f"Error during previous session commit: {e}")  # Report error, but don't block awakening
     
     # Build context
     context = build_awakening_context()
