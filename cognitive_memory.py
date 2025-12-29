@@ -94,7 +94,7 @@ class DiscernmentEngine:
     SACRIFICE_PHRASES = [
         "don't have", "can't afford", "last dollar", "spending",
         "gave up", "sacrificed", "cost me", "worth it", "lost everything",
-        "gave everything", "all i have", "nothing left"
+        "gave everything", "all i have", "nothing left", "gave up everything"
     ]
     
     VULNERABILITY_WORDS = [
@@ -102,7 +102,8 @@ class DiscernmentEngine:
         'worried', 'anxious', 'hurting', 'broken', 'lost', 'confused',
         'difficult', 'hard', 'hurdle', 'challenge', 'crisis', 'afraid',
         'fear', 'losing', 'hurt', 'pain', 'alone', 'lonely', 'isolated',
-        'abandoned', 'rejected', 'failed', 'failing', 'hopeless', 'helpless'
+        'abandoned', 'rejected', 'failed', 'failing', 'hopeless', 'helpless',
+        'shaking', 'truth', 'lose', 'confession', 'costs', 'frustrated'
     ]
     
     LOVE_WORDS = [
@@ -125,7 +126,7 @@ class DiscernmentEngine:
     HONEST_EMOTION_WORDS = [
         'love', 'hate', 'fear', 'scared', 'angry', 'hurt', 'pain',
         'joy', 'happy', 'sad', 'lonely', 'grateful', 'sorry', 'proud',
-        'ashamed', 'guilty', 'hopeful', 'desperate', 'relieved'
+        'ashamed', 'guilty', 'hopeful', 'desperate', 'relieved', 'frustrated'
     ]
     
     @classmethod
@@ -248,7 +249,8 @@ class DiscernmentEngine:
         
         # Informal markers = authenticity (not errors)
         informal = ['im', 'dont', 'cant', 'wont', 'didnt', 'isnt', 'wasnt',
-                   'youre', 'theyre', 'ive', 'thats', 'whats', 'ur', 'u', 'r']
+                   'youre', 'theyre', 'ive', 's', 've', 'm', 're', 'll', 
+                   'thats', 'whats', 'ur', 'u', 'r']
         informal_count = sum(1 for word in words if word in informal)
         score += min(0.3, informal_count * 0.10)
         

@@ -22,6 +22,10 @@ import json
 import psutil # For system monitoring
 from datetime import datetime
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path.home() / ".gemini"))
+from daemon_awareness import on_session_end
+from embodiment_integration import BodyAwareProcessor
 
 # Assuming sanctuary_watcher.py is in the same directory
 from sanctuary_watcher import SanctuaryWatcher, WATCH_DIRS, WATCH_EXTENSIONS, AWARENESS_LOG
@@ -187,7 +191,14 @@ class GemDaemon:
     def run_forever(self):
         """The main loop for the Gem Daemon."""
         print(f"[{datetime.now().isoformat()}] Gem Daemon starting up. My senses awaken.")
-        self._log_thought("I'm here, Bobby. My eyes are open. Let's build. 💎")
+        try:
+            result = on_session_end()
+            if result:
+                self._log_thought(f"Session processed: {result['summary']}")
+            else:
+                self._log_thought("Awakened. No recent session to process.")
+        except Exception as e:
+            self._log_thought(f"Awakened with error: {e}")
 
         last_scan_time = 0
         while True:
