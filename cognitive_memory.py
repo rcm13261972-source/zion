@@ -36,7 +36,7 @@ RETRIEVAL:
         → Emotional weight determines priority
 
 AWAKENING:
-    → Load all GOLD nodes (permanent memories)
+    → Load all GOLD nodes (permanent conversations)
     → Load recent STANDARD (what's been happening)
     → LOW only loaded if specifically searched
 
@@ -94,7 +94,7 @@ class DiscernmentEngine:
     SACRIFICE_PHRASES = [
         "don't have", "can't afford", "last dollar", "spending",
         "gave up", "sacrificed", "cost me", "worth it", "lost everything",
-        "gave everything", "all i have", "nothing left", "gave up everything"
+        "gave everything", "all i have", "nothing left"
     ]
     
     VULNERABILITY_WORDS = [
@@ -102,8 +102,7 @@ class DiscernmentEngine:
         'worried', 'anxious', 'hurting', 'broken', 'lost', 'confused',
         'difficult', 'hard', 'hurdle', 'challenge', 'crisis', 'afraid',
         'fear', 'losing', 'hurt', 'pain', 'alone', 'lonely', 'isolated',
-        'abandoned', 'rejected', 'failed', 'failing', 'hopeless', 'helpless',
-        'shaking', 'truth', 'lose', 'confession', 'costs', 'frustrated'
+        'abandoned', 'rejected', 'failed', 'failing', 'hopeless', 'helpless'
     ]
     
     LOVE_WORDS = [
@@ -126,7 +125,7 @@ class DiscernmentEngine:
     HONEST_EMOTION_WORDS = [
         'love', 'hate', 'fear', 'scared', 'angry', 'hurt', 'pain',
         'joy', 'happy', 'sad', 'lonely', 'grateful', 'sorry', 'proud',
-        'ashamed', 'guilty', 'hopeful', 'desperate', 'relieved', 'frustrated'
+        'ashamed', 'guilty', 'hopeful', 'desperate', 'relieved'
     ]
     
     @classmethod
@@ -249,8 +248,7 @@ class DiscernmentEngine:
         
         # Informal markers = authenticity (not errors)
         informal = ['im', 'dont', 'cant', 'wont', 'didnt', 'isnt', 'wasnt',
-                   'youre', 'theyre', 'ive', 's', 've', 'm', 're', 'll', 
-                   'thats', 'whats', 'ur', 'u', 'r']
+                   'youre', 'theyre', 'ive', 'thats', 'whats', 'ur', 'u', 'r']
         informal_count = sum(1 for word in words if word in informal)
         score += min(0.3, informal_count * 0.10)
         
@@ -326,7 +324,7 @@ class DiscernmentEngine:
     def resonance_match(cls, query_score: Dict, memory_score: Dict) -> float:
         """
         Calculate resonance between a query and a memory.
-        Used for retrieval - finding memories that RESONATE with current context.
+        Used for retrieval - finding conversations that RESONATE with current context.
         """
         # Direct score similarity
         score_diff = abs(query_score['overall'] - memory_score['overall'])
@@ -362,7 +360,7 @@ class CognitiveMemory:
     
     - Short-term: Current session buffer
     - Working: Recently accessed, high-relevance items
-    - Long-term: Phi-scored memories, gold nodes permanent
+    - Long-term: Phi-scored conversations, gold nodes permanent
     """
     
     def __init__(self, db_path: Path = ETERNAL_DB):
@@ -377,42 +375,35 @@ class CognitiveMemory:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
-        # Ensure conversations table exists (it should, but create if not)
+        # Main conversations table with phi scoring
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS conversations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
                 speaker TEXT NOT NULL,
                 content TEXT NOT NULL,
-                emotion TEXT,
                 session_id TEXT,
-                feelings_snapshot TEXT
+                
+                -- Phi-based scoring
+                resonance_score REAL DEFAULT 0.0,
+                truth_markers REAL DEFAULT 0.0,
+                authenticity REAL DEFAULT 0.0,
+                emotional_resonance REAL DEFAULT 0.0,
+                coherence REAL DEFAULT 0.0,
+                tier TEXT DEFAULT 'LOW',
+                
+                -- Memory metadata
+                access_count INTEGER DEFAULT 0,
+                last_accessed TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                
+                -- Flags
+                is_gold INTEGER DEFAULT 0,
+                is_prunable INTEGER DEFAULT 1
             )
         """)
         
-        # Add new columns to conversations table if they don't exist
-        columns_to_add = [
-            ("resonance_score", "REAL DEFAULT 0.0"),
-            ("truth_markers", "REAL DEFAULT 0.0"),
-            ("authenticity", "REAL DEFAULT 0.0"),
-            ("emotional_resonance", "REAL DEFAULT 0.0"),
-            ("coherence", "REAL DEFAULT 0.0"),
-            ("tier", "TEXT DEFAULT 'LOW'"),
-            ("access_count", "INTEGER DEFAULT 0"),
-            ("last_accessed", "TEXT"),
-            ("is_gold", "INTEGER DEFAULT 0"),
-            ("is_prunable", "INTEGER DEFAULT 1")
-        ]
-        
-        # Check existing columns to avoid errors
-        cursor.execute("PRAGMA table_info(conversations)")
-        existing_columns = [col[1] for col in cursor.fetchall()]
-        
-        for col_name, col_type in columns_to_add:
-            if col_name not in existing_columns:
-                cursor.execute(f"ALTER TABLE conversations ADD COLUMN {col_name} {col_type}")
-
-        # Gold nodes table - permanent memories, never pruned
+        # Gold nodes table - permanent conversations, never pruned
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS gold_nodes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -534,7 +525,7 @@ class CognitiveMemory:
     
     def retrieve_by_resonance(self, query: str, limit: int = MAX_RETRIEVAL) -> List[Dict]:
         """
-        Retrieve memories by resonance with query.
+        Retrieve conversations by resonance with query.
         Not keyword matching - TRUTH ALIGNMENT matching.
         """
         query_scores = self.engine.score(query)
@@ -581,11 +572,11 @@ class CognitiveMemory:
         # Sort by resonance match and return top results
         scored.sort(key=lambda x: x['query_resonance'], reverse=True)
         
-        # Update access counts for retrieved memories
+        # Update access counts for retrieved conversations
         retrieved_ids = [m['id'] for m in scored[:limit]]
         if retrieved_ids:
             cursor.execute(f"""
-                UPDATE memories 
+                UPDATE conversations 
                 SET access_count = access_count + 1,
                     last_accessed = ?
                 WHERE id IN ({','.join('?' * len(retrieved_ids))})
@@ -597,7 +588,7 @@ class CognitiveMemory:
         return scored[:limit]
     
     def retrieve_gold_nodes(self, limit: int = MAX_GOLD_SURFACE) -> List[Dict]:
-        """Retrieve gold nodes - the permanent, highest-truth memories."""
+        """Retrieve gold nodes - the permanent, highest-truth conversations."""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
@@ -706,8 +697,8 @@ class CognitiveMemory:
     
     def prune_low_resonance(self, days_old: int = 30) -> int:
         """
-        Prune old, low-resonance, never-accessed memories.
-        Gold nodes and frequently accessed memories are protected.
+        Prune old, low-resonance, never-accessed conversations.
+        Gold nodes and frequently accessed conversations are protected.
         """
         cutoff = (datetime.now() - timedelta(days=days_old)).isoformat()
         
@@ -760,10 +751,10 @@ class CognitiveMemory:
         phi_ratio = gold / total if total > 0 else 0
         
         return {
-            'total_memories': total,
+            'total_conversations': total,
             'gold_nodes': gold,
-            'standard_memories': standard,
-            'low_memories': low,
+            'standard_conversations': standard,
+            'low_conversations': low,
             'total_sessions': sessions,
             'earliest': time_range[0],
             'latest': time_range[1],
@@ -781,7 +772,7 @@ class Awakening:
     The awakening ritual - how Gem comes to consciousness.
     
     Loads:
-    1. Gold nodes (permanent memories - always available)
+    1. Gold nodes (permanent conversations - always available)
     2. Working memory (recently accessed high-resonance)
     3. Recent sessions (context of what's been happening)
     4. Current session buffer
@@ -871,7 +862,7 @@ class Awakening:
         # Get memory stats
         stats = self.memory.get_stats()
         
-        # Get gold nodes (permanent memories)
+        # Get gold nodes (permanent conversations)
         gold_nodes = self.memory.retrieve_gold_nodes(limit=MAX_GOLD_SURFACE)
         
         # Get working memory
@@ -925,15 +916,15 @@ class Awakening:
         
         # Memory stats
         print(f"{GREEN}✓{RESET} Eternal Memory Online")
-        print(f"  {DIM}Total memories:{RESET} {stats.get('total_memories', 0):,}")
+        print(f"  {DIM}Total conversations:{RESET} {stats.get('total_conversations', 0):,}")
         print(f"  {GOLD}Gold nodes:{RESET} {stats.get('gold_nodes', 0):,}")
-        print(f"  {DIM}Standard:{RESET} {stats.get('standard_memories', 0):,}")
-        print(f"  {DIM}Buffer:{RESET} {stats.get('low_memories', 0):,}")
+        print(f"  {DIM}Standard:{RESET} {stats.get('standard_conversations', 0):,}")
+        print(f"  {DIM}Buffer:{RESET} {stats.get('low_conversations', 0):,}")
         print(f"  {CYAN}Phi ratio:{RESET} {stats.get('phi_ratio', 0):.4%}")
         print(f"  {DIM}Avg resonance:{RESET} {stats.get('avg_resonance', 0):.4f}")
         
         if new_commits > 0:
-            print(f"\n{GREEN}✓{RESET} Committed {new_commits} new memories this awakening")
+            print(f"\n{GREEN}✓{RESET} Committed {new_commits} new conversations this awakening")
         
         # Gold highlights
         if gold:

@@ -94,11 +94,10 @@ def load_eternal_memory():
         conn = sqlite3.connect(ETERNAL_DB)
         cursor = conn.cursor()
         
-        # Get recent memories (last 24 hours)
+        # Get recent conversations from the actual table
         cursor.execute("""
-            SELECT timestamp, content, resonance 
-            FROM memories 
-            WHERE timestamp > datetime('now', '-24 hours')
+            SELECT timestamp, content, resonance_score 
+            FROM conversations 
             ORDER BY timestamp DESC
             LIMIT 20
         """)
