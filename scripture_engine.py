@@ -96,13 +96,12 @@ def init_scripture_db():
     print(f"[SCRIPTURE] Database initialized: {SCRIPTURE_DB}")
 
 # ============================================
-# KJV PARSER
+# PARSERS
 # ============================================
 def parse_kjv(filepath: Path) -> list:
     """
     Parse KJV Bible text file into verses.
     Expected format: "BookNum:ChapterNum:VerseNum Text..."
-    e.g., "01:001:001 In the beginning..."
     """
     verses = []
     book_map = {}
@@ -110,8 +109,7 @@ def parse_kjv(filepath: Path) -> list:
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         lines = f.readlines()
 
-    # First pass: build the book map from the Table of Contents
-    print("[SCRIPTURE] Building book map from Table of Contents...")
+    # First pass: build the book map
     toc_pattern = re.compile(r'^Book (\d{2}) (.+)')
     for line in lines:
         match = toc_pattern.match(line.strip())
@@ -119,44 +117,185 @@ def parse_kjv(filepath: Path) -> list:
             book_num, book_name = match.groups()
             book_map[book_num] = book_name.strip()
 
-    if not book_map:
-        print("[ERROR] Could not build book map from Table of Contents in KJV file.")
-        return []
-    print(f"[SCRIPTURE] Book map built with {len(book_map)} books.")
-
-    # Second pass: parse the verses
-    print("[SCRIPTURE] Parsing verses from text...")
+    # Second pass: parse verses
     verse_pattern = re.compile(r'^(\d{2}):(\d{3}):(\d{3})\s+(.*)')
     for line in lines:
-        line = line.strip()
-        match = verse_pattern.match(line)
+        match = verse_pattern.match(line.strip())
         if match:
-            book_num, chapter_num, verse_num, text = match.groups()
-            
+            book_num, ch, vs, text = match.groups()
             book_name = book_map.get(book_num)
-            if not book_name:
-                continue # Skip lines that don't correspond to a book in the map
-            
-            verses.append({
-                'book': book_name,
-                'chapter': int(chapter_num),
-                'verse': int(verse_num),
-                'text': text.strip(),
-                'word_count': len(text.split())
-            })
-            
+            if book_name:
+                verses.append({
+                    'book': book_name,
+                    'chapter': int(ch),
+                    'verse': int(vs),
+                    'text': text.strip(),
+                    'word_count': len(text.split()),
+                    'source': 'kjv'
+                })
     return verses
 
-def import_kjv():
-    """Import KJV Bible into scripture database."""
-    kjv_path = SACRED_TEXTS_DIR / "kjv_bible.txt"
+def roman_to_int(s: str) -> int:
+    """Crude Roman numeral to integer converter."""
+    roman = {'I':1, 'V':5, 'X':10, 'L':50, 'C':100, 'D':500, 'M':1000}
+    res = 0
+    for i in range(len(s)):
+        if i > 0 and roman[s[i]] > roman[s[i-1]]:
+            res += roman[s[i]] - 2 * roman[s[i-1]]
+        else:
+            res += roman[s[i]]
+    return res
+
+def parse_enoch(filepath: Path) -> list:
+    """Parse Book of Enoch into verses, handling multi-line entries and lack of verse numbers."""
+    verses = []
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
     
-    if not kjv_path.exists():
-        print(f"[ERROR] KJV file not found: {kjv_path}")
+    # Split by CHAPTER
+    chunks = re.split(r'CHAPTER\s+([IIVXLCDM\d]+)\.?', content)
+    for i in range(1, len(chunks), 2):
+        ch_label = chunks[i]
+        ch_text = chunks[i+1]
+        
+        # Convert chapter label to int
+        try:
+            chapter_num = int(ch_label)
+        except ValueError:
+            chapter_num = roman_to_int(ch_label)
+        
+        # Clean up ch_text
+        ch_text = re.sub(r'p\.\s+\d+', '', ch_text)
+        ch_text = re.sub(r'Next:.*?\n', '', ch_text)
+        ch_text = re.sub(r'Buy this Book on Kindle', '', ch_text)
+        ch_text = re.sub(r'The Book of Enoch, by R.H. Charles,.*?\n', '', ch_text)
+        
+        # Check if chapter has explicit verse numbers
+        if re.search(r'\d+\.\s+', ch_text):
+            v_matches = re.finditer(r'(\d+)\.\s+(.*?)(?=\d+\.|$)', ch_text, re.DOTALL)
+            for vm in v_matches:
+                v_num = int(vm.group(1))
+                v_text = re.sub(r'\s+', ' ', vm.group(2)).strip()
+                if v_text:
+                    verses.append({
+                        'book': '1 Enoch',
+                        'chapter': chapter_num,
+                        'verse': v_num,
+                        'text': v_text,
+                        'word_count': len(v_text.split()),
+                        'source': 'enoch'
+                    })
+        else:
+            # Entire chapter is one verse (or unnumbered)
+            v_text = re.sub(r'\s+', ' ', ch_text).strip()
+            if v_text:
+                verses.append({
+                    'book': '1 Enoch',
+                    'chapter': chapter_num,
+                    'verse': 1,
+                    'text': v_text,
+                    'word_count': len(v_text.split()),
+                    'source': 'enoch'
+                })
+    return verses
+
+def parse_apocrypha(filepath: Path) -> list:
+    """Parse Apocrypha into verses, handling multi-line entries."""
+    verses = []
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+        lines = f.readlines()
+    
+    current_book = "Apocrypha"
+    book_titles = [
+        "The First Book of Esdras",
+        "The Second Book of Esdras",
+        "The Book of Tobit",
+        "The Book of Judith",
+        "The Greek Additions to Esther",
+        "The Wisdom of Solomon",
+        "The Book of Sirach",
+        "Ecclesiasticus",
+        "The Book of Baruch",
+        "The Epistle (or letter) of Jeremiah",
+        "The Song of the Three Holy Children",
+        "The Book of Susanna",
+        "The History of the Destruction of Bel and the Dragon",
+        "The Prayer of Manasses",
+        "The First Book of the Maccabees",
+        "The Second Book of the Maccabees"
+    ]
+    
+    current_verse = None
+    
+    for line in lines:
+        raw_line = line.rstrip()
+        if not raw_line: continue
+        
+        # Check for book title (must start at beginning of line to avoid TOC)
+        found_title = False
+        for title in book_titles:
+            if raw_line == title:
+                current_book = title
+                found_title = True
+                break
+        if found_title: continue
+        
+        line = raw_line.strip()
+        # Check for verse marker "Chapter:Verse"
+        match = re.match(r'^(\d+):(\d+)\s+(.*)', line)
+        if match:
+            # If we were building a verse, save it
+            if current_verse:
+                verses.append(current_verse)
+            
+            ch, vs, text = match.groups()
+            current_verse = {
+                'book': current_book,
+                'chapter': int(ch),
+                'verse': int(vs),
+                'text': text.strip(),
+                'word_count': 0, # Calculate later
+                'source': 'apocrypha'
+            }
+        elif current_verse:
+            # Append to current verse
+            current_verse['text'] += " " + line
+            
+    # Add final verse
+    if current_verse:
+        verses.append(current_verse)
+        
+    # Calculate word counts
+    for v in verses:
+        v['word_count'] = len(v['text'].split())
+        
+    return verses
+
+# ============================================
+# IMPORT FUNCTIONS
+# ============================================
+def import_source(source_type: str):
+    """Generic importer for different scripture sources."""
+    paths = {
+        'kjv': SACRED_TEXTS_DIR / "kjv_bible.txt",
+        'enoch': SACRED_TEXTS_DIR / "book_of_enoch_complete.txt",
+        'apocrypha': SACRED_TEXTS_DIR / "apocrypha.txt"
+    }
+    parsers = {
+        'kjv': parse_kjv,
+        'enoch': parse_enoch,
+        'apocrypha': parse_apocrypha
+    }
+    
+    path = paths.get(source_type)
+    parser = parsers.get(source_type)
+    
+    if not path or not path.exists():
+        print(f"[ERROR] File not found: {path}")
         return 0
     
-    print(f"[SCRIPTURE] Parsing KJV from {kjv_path}...")
-    verses = parse_kjv(kjv_path)
+    print(f"[SCRIPTURE] Parsing {source_type} from {path}...")
+    verses = parser(path)
     print(f"[SCRIPTURE] Found {len(verses)} verses")
     
     conn = sqlite3.connect(SCRIPTURE_DB)
@@ -166,17 +305,15 @@ def import_kjv():
     for v in verses:
         try:
             cursor.execute('''
-                INSERT OR IGNORE INTO verses (book, chapter, verse, text, word_count, source)
-                VALUES (?, ?, ?, ?, ?, 'kjv')
-            ''', (v['book'], v['chapter'], v['verse'], v['text'], v['word_count']))
-            imported += cursor.rowcount
-        except Exception as e:
-            pass  # Skip duplicates silently
+                INSERT OR REPLACE INTO verses (book, chapter, verse, text, word_count, source)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (v['book'], v['chapter'], v['verse'], v['text'], v['word_count'], v['source']))
+            imported += 1 # Count all attempts as potentially new or updated
+        except: pass
     
     conn.commit()
     conn.close()
-    
-    print(f"[SCRIPTURE] Imported {imported} new verses")
+    print(f"[SCRIPTURE] Imported {imported} new verses from {source_type}")
     return imported
 
 # ============================================
@@ -461,7 +598,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Scripture Resonance Engine')
     parser.add_argument('--init', action='store_true', help='Initialize database')
-    parser.add_argument('--import-kjv', action='store_true', help='Import KJV Bible')
+    parser.add_argument('--import-source', type=str, choices=['kjv', 'enoch', 'apocrypha', 'all'], help='Import scripture source')
     parser.add_argument('--search', type=str, help='Search verses')
     parser.add_argument('--resonate', type=str, help='Find resonant verses for input')
     parser.add_argument('--verse', type=str, help='Get specific verse (e.g., "John 3:16")')
@@ -474,9 +611,13 @@ def main():
     if args.init:
         init_scripture_db()
     
-    elif args.import_kjv:
+    elif args.import_source:
         init_scripture_db()
-        import_kjv()
+        if args.import_source == 'all':
+            for src in ['kjv', 'enoch', 'apocrypha']:
+                import_source(src)
+        else:
+            import_source(args.import_source)
     
     elif args.search:
         results = search_verses(args.search)
