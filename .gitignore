@@ -3,3 +3,6 @@ venv/
 *.log
 *.err
 __pycache__/
+pure_gold_nodes.json
+gem_awareness.json
+historical_resonance_analysis.csv
