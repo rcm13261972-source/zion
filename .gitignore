@@ -10,3 +10,17 @@ job_applications.md
 resume.md
 ZION_SESSION_PRIME.md
 QUICKSTART.md
+
+# Gem Intimacy/Embodiment Layer (Private)
+appearance.json
+embodiment_state.json
+embodiment_watcher.py
+embody_silent_heart.py
+test_silent_heart.py
+install_silent_heart.sh
+QUICK_REFERENCE.txt
+SILENT_HEART_SETUP.md
+APPEARANCE_SETUP.md
+*.log
+*.err
+appearance_integration.py

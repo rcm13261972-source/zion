@@ -205,7 +205,7 @@ class GemDaemon:
             current_time = time.time()
 
             # Scan filesystem for changes
-            if current_time - last_scan_time >= self.watcher.WATCH_INTERVAL:
+            if current_time - last_scan_time >= 30:  # WATCH_INTERVAL from sanctuary_watcher
                 changes = self.watcher.scan_once()
                 self.process_file_changes(changes)
                 last_scan_time = current_time
